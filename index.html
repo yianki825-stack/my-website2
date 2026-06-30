@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 小说类型差异分析 · 言情主角 vs 非言情主角</title>
+    <!-- Chart.js 核心库 + datalabels 插件 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <!-- 字体与基础样式 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f4f7fc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 2rem 1.5rem;
+            color: #1e293b;
+        }
+
+        .dashboard {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-weight: 600;
+            font-size: 1.9rem;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #0b2b4a, #1f5e8e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .sub {
+            font-size: 0.95rem;
+            color: #475569;
+            background: #e9edf3;
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+
+        /* 一行两张图 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.8rem;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 12px 30px -8px rgba(0, 20, 40, 0.08), 0 4px 12px rgba(0, 0, 0, 0.02);
+            padding: 1.5rem 1.2rem 1.2rem 1.2rem;
+            transition: transform 0.1s ease;
+            border: 1px solid rgba(215, 228, 243, 0.4);
+            backdrop-filter: blur(2px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            box-shadow: 0 20px 35px -12px rgba(18, 52, 92, 0.12);
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+            letter-spacing: -0.01em;
+            color: #0f2b44;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0.6rem;
+            border-bottom: 1px solid #e7edf5;
+            padding-bottom: 0.5rem;
+        }
+
+        .card-title span {
+            background: #dce5f0;
+            border-radius: 30px;
+            padding: 0.1rem 0.7rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #1f4970;
+            letter-spacing: 0.3px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 210px;
+            min-height: 180px;
+            margin-top: 0.2rem;
+        }
+
+        .chart-wrapper canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* 图表下方的简短说明 */
+        .chart-insight {
+            font-size: 0.8rem;
+            color: #1f3d5c;
+            background: #f0f5fc;
+            padding: 0.5rem 0.8rem;
+            border-radius: 12px;
+            margin-top: 0.8rem;
+            border-left: 3px solid #3d7eb0;
+            line-height: 1.5;
+            font-weight: 450;
+        }
+
+        .chart-insight strong {
+            color: #0b2b4a;
+        }
+
+        .footnote {
+            font-size: 0.7rem;
+            color: #657b97;
+            margin-top: 0.6rem;
+            border-top: 1px dashed #dde5ef;
+            padding-top: 0.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .footnote .pill {
+            background: #eef3f9;
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            font-weight: 500;
+            color: #1f4468;
+        }
+
+        /* responsive */
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+            .chart-wrapper {
+                height: 180px;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            background: #e2e9f2;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #b4c8dd;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1>📊 维度仪表板 · 言情类 vs 非言情类</h1>
+        <div class="sub">基于 22 部样本 · 六维对比 · 百分比显示</div>
+    </div>
+
+    <div class="grid">
+        <!-- 卡片 1: 主要人格特质 -->
+        <div class="card">
+            <div class="card-title">🧠 主要人格特质 <span>N=8 / 14</span></div>
+            <div class="chart-wrapper"><canvas id="chart1"></canvas></div>
+            <div class="chart-insight"><strong>核心差异：</strong>两类均以尽责性、开放性为主，但言情类宜人性更高（62.5% vs 42.9%），主角更具亲和力。</div>
+            <div class="footnote">
+                <span class="pill">尽责性高</span>
+                <span class="pill">开放性高</span>
+                <span class="pill">宜人性高</span>
+            </div>
+        </div>
+
+        <!-- 卡片 2: 初始社会地位 -->
+        <div class="card">
+            <div class="card-title">🏛️ 初始社会地位 <span>底层/中层/上层</span></div>
+            <div class="chart-wrapper"><canvas id="chart2"></canvas></div>
+            <div class="chart-insight"><strong>核心差异：</strong>底层出身是主流，但言情类中层占比更高（37.5% vs 21.4%），初始资源更优。</div>
+            <div class="footnote">
+                <span class="pill">底层</span>
+                <span class="pill">中层</span>
+                <span class="pill">上层</span>
+            </div>
+        </div>
+
+        <!-- 卡片 3: 能力成长速度 -->
+        <div class="card">
+            <div class="card-title">⚡ 能力成长速度 <span>快/正常/未知</span></div>
+            <div class="chart-wrapper"><canvas id="chart3"></canvas></div>
+            <div class="chart-insight"><strong>核心差异：</strong>非言情类成长速度标记为“快”的比例高达85.7%，远高于言情类的62.5%，更强调快速变强。</div>
+            <div class="footnote">
+                <span class="pill">快</span>
+                <span class="pill">正常</span>
+                <span class="pill">未知</span>
+            </div>
+        </div>
+
+        <!-- 卡片 4: 核心动机 -->
+        <div class="card">
+            <div class="card-title">🎯 核心动机 <span>守护/变强/复仇/生存</span></div>
+            <div class="chart-wrapper"><canvas id="chart4"></canvas></div>
+            <div class="chart-insight"><strong>核心差异：</strong>言情类“守护”动机占绝对主导（62.5%），非言情类动机更分散，变强、复仇、生存均占一定比例。</div>
+            <div class="footnote">
+                <span class="pill">守护</span>
+                <span class="pill">变强</span>
+                <span class="pill">复仇</span>
+                <span class="pill">生存</span>
+            </div>
+        </div>
+
+        <!-- 卡片 5: 对待敌人方式 -->
+        <div class="card">
+            <div class="card-title">⚔️ 对待敌人方式 <span>彻底消灭/打服收编/宽容放过</span></div>
+            <div class="chart-wrapper"><canvas id="chart5"></canvas></div>
+            <div class="chart-insight"><strong>核心差异：</strong>非言情类“彻底消灭”占比57.1%，而言情类仅25.0%；言情类“宽容放过”37.5%，远超非言情类的7.1%。</div>
+            <div class="footnote">
+                <span class="pill">彻底消灭</span>
+                <span class="pill">打服收编</span>
+                <span class="pill">宽容放过</span>
+                <span class="pill">无/未知</span>
+            </div>
+        </div>
+
+        <!-- 卡片 6: 道德立场 -->
+        <div class="card">
+            <div class="card-title">⚖️ 道德立场 <span>正义/中立/利己</span></div>
+            <div class="chart-wrapper"><canvas id="chart6"></canvas></div>
+            <div class="chart-insight"><strong>核心差异：</strong>两类均以正义为主导，但非言情类出现14.3%“利己”倾向，言情类为0%，道德刻画更具灰色地带。</div>
+            <div class="footnote">
+                <span class="pill">正义</span>
+                <span class="pill">中立</span>
+                <span class="pill">利己</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // 注册 datalabels 插件
+        Chart.register(ChartDataLabels);
+
+        // ---------- 原始频次数据 (基于表格) ----------
+        const N_ROMANCE = 8;
+        const N_NON = 14;
+
+        const rawData = {
+            trait: {
+                labels: ['尽责性高', '开放性高', '宜人性高'],
+                romance: [6, 5, 5],
+                nonRomance: [12, 11, 6]
+            },
+            status: {
+                labels: ['底层', '中层', '上层'],
+                romance: [4, 3, 1],
+                nonRomance: [9, 3, 2]
+            },
+            growth: {
+                labels: ['快', '正常', '未知'],
+                romance: [5, 0, 3],
+                nonRomance: [12, 1, 1]
+            },
+            motive: {
+                labels: ['守护', '变强', '复仇', '生存'],
+                romance: [5, 1, 0, 0],
+                nonRomance: [5, 3, 2, 2]
+            },
+            enemy: {
+                labels: ['彻底消灭', '打服收编', '宽容放过', '无/未知'],
+                romance: [2, 0, 3, 3],
+                nonRomance: [8, 3, 1, 2]
+            },
+            moral: {
+                labels: ['正义', '中立', '利己'],
+                romance: [5, 2, 0],
+                nonRomance: [7, 4, 2]
+            }
+        };
+
+        // ---------- 将频次转换为百分比 ----------
+        function toPercentage(romanceFreq, nonFreq) {
+            const rPct = romanceFreq.map(v => parseFloat((v / N_ROMANCE * 100).toFixed(1)));
+            const nPct = nonFreq.map(v => parseFloat((v / N_NON * 100).toFixed(1)));
+            return { romancePct: rPct, nonPct: nPct };
+        }
+
+        const pctData = {
+            trait: { labels: rawData.trait.labels, ...toPercentage(rawData.trait.romance, rawData.trait.nonRomance) },
+            status: { labels: rawData.status.labels, ...toPercentage(rawData.status.romance, rawData.status.nonRomance) },
+            growth: { labels: rawData.growth.labels, ...toPercentage(rawData.growth.romance, rawData.growth.nonRomance) },
+            motive: { labels: rawData.motive.labels, ...toPercentage(rawData.motive.romance, rawData.motive.nonRomance) },
+            enemy: { labels: rawData.enemy.labels, ...toPercentage(rawData.enemy.romance, rawData.enemy.nonRomance) },
+            moral: { labels: rawData.moral.labels, ...toPercentage(rawData.moral.romance, rawData.moral.nonRomance) }
+        };
+
+        // ---------- 颜色 ----------
+        const colorPalette = {
+            romance: 'rgba(236, 112, 99, 0.85)',
+            romanceBorder: '#b34a3e',
+            nonRomance: 'rgba(63, 131, 200, 0.85)',
+            nonRomanceBorder: '#2d6099'
+        };
+
+        // ---------- 创建百分比柱状图 ----------
+        function createPctBarChart(ctx, labels, romancePct, nonPct) {
+            const maxVal = Math.max(...romancePct, ...nonPct);
+            const yMax = Math.min(100, maxVal + 12);
+
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '言情类 (N=8)',
+                            data: romancePct,
+                            backgroundColor: colorPalette.romance,
+                            borderColor: colorPalette.romanceBorder,
+                            borderWidth: 1.5,
+                            borderRadius: 4,
+                            barPercentage: 0.65,
+                            categoryPercentage: 0.8,
+                        },
+                        {
+                            label: '非言情类 (N=14)',
+                            data: nonPct,
+                            backgroundColor: colorPalette.nonRomance,
+                            borderColor: colorPalette.nonRomanceBorder,
+                            borderWidth: 1.5,
+                            borderRadius: 4,
+                            barPercentage: 0.65,
+                            categoryPercentage: 0.8,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                font: { size: 10, weight: '500' },
+                                color: '#1e3a5f',
+                                padding: 8,
+                                usePointStyle: true,
+                                pointStyle: 'rectRounded',
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0b253f',
+                            titleColor: '#f0f6fe',
+                            bodyColor: '#dce7f5',
+                            cornerRadius: 8,
+                            padding: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw + '%';
+                                }
+                            }
+                        },
+                        datalabels: {
+                            color: '#1e2f44',
+                            anchor: 'end',
+                            align: 'end',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: function(value) { return value + '%'; },
+                            offset: 0,
+                            clamp: true,
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: yMax,
+                            grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+                            ticks: { 
+                                stepSize: 10, 
+                                font: { size: 9 },
+                                callback: function(value) { return value + '%'; }
+                            },
+                            title: { display: true, text: '百分比 (%)', font: { size: 9, weight: '500' }, color: '#3d5d7e' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 9, weight: '500' }, color: '#1f3d5c' }
+                        }
+                    },
+                    animation: { duration: 400 },
+                    elements: { bar: { borderRadius: 4 } }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        // ---------- 初始化所有图表 ----------
+        function initChart(id, dataObj) {
+            const ctx = document.getElementById(id).getContext('2d');
+            return createPctBarChart(ctx, dataObj.labels, dataObj.romancePct, dataObj.nonPct);
+        }
+
+        // 创建所有图表
+        const chart1 = initChart('chart1', pctData.trait);
+        const chart2 = initChart('chart2', pctData.status);
+        const chart3 = initChart('chart3', pctData.growth);
+        const chart4 = initChart('chart4', pctData.motive);
+        const chart5 = initChart('chart5', pctData.enemy);
+        const chart6 = initChart('chart6', pctData.moral);
+
+        window.__charts = [chart1, chart2, chart3, chart4, chart5, chart6];
+    })();
+</script>
+
+</body>
+</html>
